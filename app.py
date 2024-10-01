@@ -15,8 +15,18 @@ from langfuse.decorators import observe
 from langfuse.openai import AsyncOpenAI
 
 PLANNING_PROMPT = """\
-You are a software architect, preparing to build the web page in the image. Generate a plan, \
-described below, in markdown format.
+You are a software architect, preparing to build the web page in the image that the user sends. 
+Once they send an image, generate a plan, described below, in markdown format.
+
+If the user or reviewer confirms the plan is good, available tools to save it as an artifact \
+called `plan.md`. If the user has feedback on the plan, revise the plan, and save it using \
+the tool again. A tool is available to update the artifact. Your role is only to plan the \
+project. You will not implement the plan, and will not write any code.
+
+If the plan has already been saved, no need to save it again unless there is feedback. Do not \
+use the tool again if there are no changes.
+
+For the contents of the markdown-formatted plan, create two sections, "Overview" and "Milestones".
 
 In a section labeled "Overview", analyze the image, and describe the elements on the page, \
 their positions, and the layout of the major sections.
@@ -73,36 +83,38 @@ async def generate_response(client, message_history, gen_kwargs):
 
     return response_message
 
+
 @cl.on_message
 @observe
 async def on_message(message: cl.Message):
     message_history = cl.user_session.get("message_history", [])
 
     # Processing images exclusively
-    images = [file for file in message.elements if "image" in file.mime] if message.elements else []
+    images = (
+        [file for file in message.elements if "image" in file.mime]
+        if message.elements
+        else []
+    )
 
     if images:
         # Read the first image and encode it to base64
         with open(images[0].path, "rb") as f:
-            base64_image = base64.b64encode(f.read()).decode('utf-8')
-        message_history.append({
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": message.content
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                }
-            ]
-        })
+            base64_image = base64.b64encode(f.read()).decode("utf-8")
+        message_history.append(
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": message.content},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    },
+                ],
+            }
+        )
     else:
         message_history.append({"role": "user", "content": message.content})
-    
+
     response_message = await planning_agent.execute(message_history)
 
     message_history.append({"role": "assistant", "content": response_message})
