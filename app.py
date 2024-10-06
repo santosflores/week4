@@ -46,6 +46,14 @@ Milestones should be formatted like this:
  - [ ] 3. This is the third milestone
 """
 
+IMPLEMENTATION_PROMPT = """\
+    You are a software developer engineer. A Software Architect has planned, and \
+    designed a potential solution. Your job as a SWE is to implement the plan. 
+    
+    Take a look at plan.md, and parse the task list from it. After parsing, you \
+    should try to implement the immediate remaining task. Save the results of \
+    the implementation under the artifacts folder.
+"""
 
 client = AsyncOpenAI()
 

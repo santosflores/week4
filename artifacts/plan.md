@@ -1,9 +1,9 @@
 # Web Page Plan
 
 ## Overview
-The webpage features a modern and vibrant design with playful graphics and a clean layout. The main sections of the page include:
+The webpage features a modern and playful design with vibrant colors and graphics. The main sections of the page include:
 
-1. **Header**: Contains the logo "jive" and buttons for "Login" and "Sign up" positioned at the top right.
+1. **Header**: Contains the logo "jive" on the left and buttons for "Login" and "Sign up" positioned at the top right.
 2. **Main Section**: 
    - A prominent headline: "Don’t make connecting awkward."
    - A subheading that elaborates on the service provided.
