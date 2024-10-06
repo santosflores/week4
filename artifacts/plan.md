@@ -1,19 +1,25 @@
 # Web Page Plan
 
 ## Overview
-The webpage features a modern and playful design with vibrant colors and graphics. The main sections of the page include:
+The webpage features a modern and vibrant design with a playful layout. The main sections of the page include:
 
-1. **Header**: Contains the logo "jive" on the left and buttons for "Login" and "Sign up" positioned at the top right.
+1. **Header**: 
+   - Contains the logo "jive" on the left.
+   - Buttons for "Login" and "Sign up" positioned at the top right.
+
 2. **Main Section**: 
    - A prominent headline: "Don’t make connecting awkward."
    - A subheading that elaborates on the service provided.
    - A call-to-action button: "Sign up free."
-   - Two mobile devices showcasing a QR code and a messaging interface, positioned centrally.
+   - Two mobile devices showcasing a QR code and a messaging interface, centered on the page.
+
 3. **How It Works Section**: 
    - Three steps detailing the process: "Scan the QR code," "Send a message," and "Follow-up from your inbox."
    - Each step is accompanied by an icon and a brief description.
    - A call-to-action button: "Start jiving."
-4. **Footer**: Contains links for "About," "Privacy," "Terms," and "Contact," along with a copyright notice.
+
+4. **Footer**: 
+   - Contains links for "About," "Privacy," "Terms," and "Contact," along with a copyright notice.
 
 ### Layout Options
 - **Flexbox vs. Grid**: 
