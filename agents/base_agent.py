@@ -3,6 +3,7 @@ import chainlit as cl
 
 from langfuse.decorators import observe
 
+
 class Agent:
     """
     Base class for all agents.
@@ -38,7 +39,7 @@ class Agent:
         self.client = client
         self.prompt = prompt
         self.gen_kwargs = gen_kwargs or {"model": "gpt-4o-mini", "temperature": 0.1}
-        
+
     @observe
     async def execute(self, message_history):
         """
@@ -118,7 +119,7 @@ class Agent:
                         }
                     )
 
-        await response_message.update()
+        # await response_message.update()
 
         return response_message.content
 
@@ -141,8 +142,8 @@ class Agent:
                         )
 
         artifacts_content += "</ARTIFACTS>"
-        
-        if has_files: 
+
+        if has_files:
             return f"{self.prompt}\n{artifacts_content}"
-        else: 
+        else:
             return self.prompt
