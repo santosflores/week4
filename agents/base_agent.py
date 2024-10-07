@@ -1,6 +1,8 @@
 import os
 import chainlit as cl
 
+from langfuse.decorators import observe
+
 class Agent:
     """
     Base class for all agents.
@@ -27,7 +29,7 @@ class Agent:
                     "required": ["filename", "contents"],
                     "additionalProperties": False,
                 },
-            }
+            },
         }
     ]
 
@@ -35,11 +37,9 @@ class Agent:
         self.name = name
         self.client = client
         self.prompt = prompt
-        self.gen_kwargs = gen_kwargs or {
-            "model": "gpt-4o-mini",
-            "temperature": 0.2
-        }
-
+        self.gen_kwargs = gen_kwargs or {"model": "gpt-4o-mini", "temperature": 0.1}
+        
+    @observe
     async def execute(self, message_history):
         """
         Executes the agent's main functionality.
@@ -51,64 +51,72 @@ class Agent:
         # Check if the first message is a system prompt
         if copied_message_history and copied_message_history[0]["role"] == "system":
             # Replace the system prompt with the agent's prompt
-            copied_message_history[0] = {"role": "system", "content": self._build_system_prompt()}
+            copied_message_history[0] = {
+                "role": "system",
+                "content": self._build_system_prompt(),
+            }
         else:
             # Insert the agent's prompt at the beginning
-            copied_message_history.insert(0, {"role": "system", "content": self._build_system_prompt()})
-            
-        
+            copied_message_history.insert(
+                0, {"role": "system", "content": self._build_system_prompt()}
+            )
+
         response_message = cl.Message(content="")
         await response_message.send()
 
-        stream = await self.client.chat.completions.create(messages=copied_message_history, stream=True, tools=self.tools, tool_choice="auto", **self.gen_kwargs)
+        stream = await self.client.chat.completions.create(
+            messages=copied_message_history,
+            stream=True,
+            tools=self.tools,
+            tool_choice="auto",
+            **self.gen_kwargs,
+        )
 
-        function_name = ""
-        arguments = ""
+        functions = {}
+        function_id = ""
         async for part in stream:
             if part.choices[0].delta.tool_calls:
                 tool_call = part.choices[0].delta.tool_calls[0]
-                function_name_delta = tool_call.function.name or ""
-                arguments_delta = tool_call.function.arguments or ""
-                
-                function_name += function_name_delta
-                arguments += arguments_delta
-        
+                if tool_call.id is not None:
+                    function_id = tool_call.id
+                    if function_id not in functions:
+                        functions[function_id] = {}
+                        functions[function_id]["name"] = tool_call.function.name
+                        functions[function_id][
+                            "arguments"
+                        ] = tool_call.function.arguments
+                else:
+                    functions[function_id]["arguments"] += tool_call.function.arguments
+
             if token := part.choices[0].delta.content or "":
-                await response_message.stream_token(token)        
-        
-        if function_name:
-            print("DEBUG: function_name:")
-            print("type:", type(function_name))
-            print("value:", function_name)
-            print("DEBUG: arguments:")
-            print("type:", type(arguments))
-            print("value:", arguments)
-            
+                await response_message.stream_token(token)
+
+        for fn_call in functions:
+            function = functions[fn_call]
+            function_name = function["name"]
+            arguments = function["arguments"]
+            print("DEBUG: function_name:", function_name)
+            print("DEBUG: arguments:", arguments)
+            print("\n")
             if function_name == "updateArtifact":
                 import json
-                
+
                 arguments_dict = json.loads(arguments)
                 filename = arguments_dict.get("filename")
                 contents = arguments_dict.get("contents")
-                
+
                 if filename and contents:
                     os.makedirs("artifacts", exist_ok=True)
                     with open(os.path.join("artifacts", filename), "w") as file:
                         file.write(contents)
-                    
+
                     # Add a message to the message history
-                    message_history.append({
-                        "role": "system",
-                        "content": f"The artifact '{filename}' was updated."
-                    })
-
-                    stream = await self.client.chat.completions.create(messages=message_history, stream=True, **self.gen_kwargs)
-                    async for part in stream:
-                        if token := part.choices[0].delta.content or "":
-                            await response_message.stream_token(token)  
-
-        else:
-            print("No tool call")
+                    message_history.append(
+                        {
+                            "role": "system",
+                            "content": f"The artifact '{filename}' was updated.",
+                        }
+                    )
 
         await response_message.update()
 
@@ -120,15 +128,21 @@ class Agent:
         """
         artifacts_content = "<ARTIFACTS>\n"
         artifacts_dir = "artifacts"
-
+        has_files = False
         if os.path.exists(artifacts_dir) and os.path.isdir(artifacts_dir):
             for filename in os.listdir(artifacts_dir):
                 file_path = os.path.join(artifacts_dir, filename)
                 if os.path.isfile(file_path):
                     with open(file_path, "r") as file:
                         file_content = file.read()
-                        artifacts_content += f"<FILE name='{filename}'>\n{file_content}\n</FILE>\n"
-        
-        artifacts_content += "</ARTIFACTS>"
+                        has_files = True
+                        artifacts_content += (
+                            f"<FILE name='{filename}'>\n{file_content}\n</FILE>\n"
+                        )
 
-        return f"{self.prompt}\n{artifacts_content}"
+        artifacts_content += "</ARTIFACTS>"
+        
+        if has_files: 
+            return f"{self.prompt}\n{artifacts_content}"
+        else: 
+            return self.prompt
